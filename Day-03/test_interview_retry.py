@@ -1,39 +1,38 @@
 import json
-from ai_interview_agent import InterviewPreparation, validate_ai_response
+from ai_interview_agent import generate_with_retry
 
 attempt_count = 0
 
-def fake_ai_response():
+def fake_ollama_chat(**kwargs):
     global attempt_count
     attempt_count += 1
-    print(f"Fake AI attempt: {attempt_count}")
+    print(f"Fake model attempt: {attempt_count}")
 
     if attempt_count < 3:
-        return "INVALID JSON"
+        return {"message": {"content": "INVALID JSON"}}
 
-    return json.dumps({
+    valid_response = {
         "job_role": "Data Analyst",
         "technical_skills": ["Python", "SQL"],
         "technical_questions": ["Explain SQL joins"],
         "hr_questions": ["Tell me about yourself"],
         "important_topics": ["Pandas", "Power BI"],
         "preparation_plan": ["Practice SQL daily"]
-    })
+    }
+    return {"message": {"content": json.dumps(valid_response)}}
 
-def test_retry():
-    for attempt in range(3):
-        response = fake_ai_response()
-        result = validate_ai_response(response)
-        if result is not None:
-            return result
-    return None
+result = generate_with_retry(
+    prompt="Test interview preparation",
+    max_retries=3,
+    chat_fn=fake_ollama_chat
+)
 
-result = test_retry()
 print("\n===== TEST REPORT =====")
-print("Total attempts:", attempt_count)
+print("Expected attempts: 3")
+print("Actual attempts:", attempt_count)
 
 if result is not None and attempt_count == 3:
     print("TEST PASSED!")
-    print("Agent recovered after two failures.")
+    print("The real retry function recovered after two invalid responses.")
 else:
     print("TEST FAILED!")
